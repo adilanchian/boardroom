@@ -180,10 +180,14 @@ struct WhiteboardDetailView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onAppear {
-                    setCanvasDimensions(for: geometry.size.width)
+                    let size = getCanvasDimensions(for: geometry.size.width)
+                    canvasWidth = size.width
+                    canvasHeight = size.height
                 }
                 .onChange(of: geometry.size) { newSize in
-                    setCanvasDimensions(for: newSize.width)
+                    let size = getCanvasDimensions(for: newSize.width)
+                    canvasWidth = size.width
+                    canvasHeight = size.height
                 }
             }
             .padding()
@@ -498,56 +502,6 @@ struct WhiteboardDetailView: View {
         
         // Save the board
         saveWhiteboard()
-    }
-    
-    private func setCanvasDimensions(for screenWidth: CGFloat) {
-        // Logic based on the screenshot table - using ONLY large widget sizes
-        let screenHeight = UIScreen.main.bounds.height
-        let idiom = UIDevice.current.userInterfaceIdiom
-        
-        // Default to large widget size
-        var widgetWidth: CGFloat = 338
-        var widgetHeight: CGFloat = 354
-        
-        if idiom == .pad {
-            // For iPad: use larger dimensions
-            widgetWidth = 364
-            widgetHeight = 382
-            
-            // For larger iPads, scale up further
-            if screenWidth > 834 {
-                widgetWidth = 388
-                widgetHeight = 408
-            }
-        } else {
-            // iPhone sizes from the screenshot - LARGE sizes only
-            if screenWidth >= 390 {
-                // For devices with width >= 390 (iPhone 12, 13, 14, etc)
-                widgetWidth = 338
-                widgetHeight = 354
-            } else if screenWidth >= 375 {
-                // For devices with width ~375 (iPhone X, XS, 11 Pro)
-                widgetWidth = 329
-                widgetHeight = 345
-            } else if screenWidth >= 320 {
-                // For smaller devices (iPhone SE, etc)
-                widgetWidth = 292
-                widgetHeight = 311
-            }
-        }
-        
-        // Set the canvas dimensions
-        // Leave some room for padding and controls
-        let availableWidth = screenWidth - 32 // Account for padding
-        
-        // For iPads in landscape, limit the width to avoid overly wide canvas
-        let maxWidth: CGFloat = idiom == .pad ? min(availableWidth, 600) : availableWidth
-        
-        // Maintain the aspect ratio from the large widget
-        canvasWidth = maxWidth
-        canvasHeight = maxWidth * (widgetHeight / widgetWidth)
-        
-        print("Screen width: \(screenWidth), Device: \(idiom), Canvas size set to: \(canvasWidth) x \(canvasHeight) (using large widget ratio)")
     }
 }
 
