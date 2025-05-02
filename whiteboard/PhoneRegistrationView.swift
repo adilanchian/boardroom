@@ -18,7 +18,7 @@ struct PhoneRegistrationView: View {
         /// +1, +44, etc → 🇺🇸, 🇬🇧, …
         static func flag(from dialCode: String) -> String {
             let digits = dialCode.filter { $0.isNumber }
-            guard let code = Int(digits) else { return "🏳️" }
+            guard let code = Int(digits) else { return "🧐" }
             
             let phoneNumberKit = PhoneNumberUtility()
             guard let regions = phoneNumberKit.countries(withCode: UInt64(code)), 
