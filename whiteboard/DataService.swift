@@ -5,15 +5,27 @@ import WidgetKit
 class DataService: ObservableObject {
     @Published var currentUser: User? = User(id: "u1", name: "You")
     @Published var whiteboards: [Whiteboard] = []
+    @Published var onboardingComplete: Bool = false
     
     private let userDefaultsKey = "whiteboard_user"
+    private let onboardingCompleteKey = "onboarding_complete"
     
     init() {
+        loadOnboardingStatus()
         loadUser()
         loadWhiteboards()
     }
     
     // MARK: - User Management
+    
+    func loadOnboardingStatus() {
+        onboardingComplete = UserDefaults.standard.bool(forKey: onboardingCompleteKey)
+    }
+    
+    func completeOnboarding() {
+        onboardingComplete = true
+        UserDefaults.standard.set(true, forKey: onboardingCompleteKey)
+    }
     
     func loadUser() {
         if let userData = UserDefaults.standard.data(forKey: userDefaultsKey),
@@ -22,21 +34,27 @@ class DataService: ObservableObject {
         }
     }
     
-    func saveUser(_ user: User) {
+    func saveUser(_ user: User, completeSetup: Bool = false) {
         self.currentUser = user
-        if let encoded = try? JSONEncoder().encode(user) {
-            UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+        
+        // Only save to UserDefaults if we're completing setup or user was already saved
+        if completeSetup || UserDefaults.standard.data(forKey: userDefaultsKey) != nil {
+            if let encoded = try? JSONEncoder().encode(user) {
+                UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+            }
+            
+            // If we're completing setup, mark onboarding as complete
+            if completeSetup {
+                completeOnboarding()
+            }
         }
-    }
-    
-    func signInWithApple(appleIdentifier: String, name: String) {
-        let user = User(name: name, appleIdentifier: appleIdentifier)
-        saveUser(user)
     }
     
     func signOut() {
         currentUser = nil
+        onboardingComplete = false
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: onboardingCompleteKey)
     }
     
     // MARK: - Whiteboard Management

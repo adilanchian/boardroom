@@ -1,12 +1,13 @@
 import SwiftUI
+import Supabase
 
 struct VerificationCodeView: View {
     @State private var verificationCode: String = ""
     @State private var phoneNumber: String
     @State private var countryCode: String
     @State private var currentPage: Int = 2
-    @State private var totalPages: Int = 2
-    @State private var navigateToMainView: Bool = false
+    @State private var totalPages: Int = 3
+    @State private var navigateToNextScreen: Bool = false
     @State private var isVerifying: Bool = false
     @State private var errorMessage: String? = nil
     @EnvironmentObject private var dataService: DataService
@@ -115,9 +116,9 @@ struct VerificationCodeView: View {
                 .opacity((verificationCode.count < 6 || isVerifying) ? 0.7 : 1)
                 
                 NavigationLink(
-                    destination: MainView()
+                    destination: UsernameView()
                         .navigationBarHidden(true),
-                    isActive: $navigateToMainView,
+                    isActive: $navigateToNextScreen,
                     label: { EmptyView() }
                 )
                 .opacity(0)
@@ -146,22 +147,70 @@ struct VerificationCodeView: View {
             
             print("User verified: \(String(describing: response.user))")
             
-            let user = response.user
+            let authUser = response.user
             
-            // Set the current user in DataService
-            dataService.currentUser = User(id: user.id.uuidString, name: user.phone ?? "User")
-            print("User created in DataService: \(user.id.uuidString)")
-            
-            
-            // If verification is successful, navigate to the main view
-            isVerifying = false
-            navigateToMainView = true
-            
+            // After successful verification, check if the user already has a profile
+            do {
+                // Try to fetch the user's profile
+                let userProfile = try await SupabaseManager.shared.fetchUserProfile()
+                print("Existing profile found: \(userProfile.name)")
+                
+                // User has an existing profile, store it and mark onboarding as complete
+                dataService.saveUser(userProfile, completeSetup: true)
+                
+                // Navigate directly to main view, skipping the username setup
+                isVerifying = false
+                // Use a different navigation path that goes straight to the main view
+                DispatchQueue.main.async {
+                    // Override previous user to ensure we have the latest data
+                    dataService.currentUser = userProfile
+                    // Skip to main by flagging onboarding as complete
+                    dataService.completeOnboarding()
+                    // Tell the app to refresh its view structure
+                    NotificationCenter.default.post(name: NSNotification.Name("RefreshRootView"), object: nil)
+                    // Return to root (resets navigation stack)
+                    self.presentationMode.wrappedValue.dismiss()
+                }
+                return
+            } catch let profileError as SupabaseError {
+                // Check if this is specifically a "profile not found" error
+                if case .profileNotFound = profileError {
+                    // No profile found - this is a new user, proceed with username setup
+                    print("No existing profile found. Proceeding to username setup.")
+                    
+                    // Set minimal user data for the onboarding flow
+                    dataService.currentUser = User(id: authUser.id.uuidString, name: authUser.phone ?? "User")
+                    dataService.onboardingComplete = false
+                    
+                    // Navigate to the username setup screen
+                    isVerifying = false
+                    navigateToNextScreen = true
+                } else {
+                    // Some other Supabase error
+                    print("Error fetching profile: \(profileError.localizedDescription)")
+                    handleProfileFetchError(user: authUser)
+                }
+            } catch {
+                // Generic error during profile fetch
+                print("Error fetching profile: \(error.localizedDescription)")
+                handleProfileFetchError(user: authUser)
+            }
         } catch {
             isVerifying = false
             errorMessage = "Invalid verification code. Please try again."
             print("Verification failed: \(error.localizedDescription)")
         }
+    }
+    
+    // Helper to handle profile fetch errors consistently
+    private func handleProfileFetchError(user: Supabase.User) {
+        // Still create the user but don't complete onboarding yet
+        // This ensures they go through username setup
+        dataService.currentUser = User(id: user.id.uuidString, name: user.phone ?? "User")
+        dataService.onboardingComplete = false
+        
+        isVerifying = false
+        navigateToNextScreen = true
     }
 }
 
