@@ -126,6 +126,19 @@ class DataService: ObservableObject {
         }
     }
     
+    // Get a whiteboard associated with a specific group ID
+    func getWhiteboardForGroup(groupId: String) -> Whiteboard? {
+        // First check if there's a whiteboard with an ID matching the groupId
+        if let existingBoard = whiteboards.first(where: { $0.id == groupId }) {
+            return existingBoard
+        }
+        
+        // If not found by direct ID match, you could implement additional search logic here
+        // For example, if you store group associations in the whiteboard metadata
+        
+        return nil
+    }
+    
     // MARK: - Backend Integration (placeholders for future implementation)
     
     func syncWithBackend() {

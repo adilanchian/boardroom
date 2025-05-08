@@ -1,12 +1,13 @@
 import SwiftUI
+import UIKit
 
 struct UsernameView: View {
     @State private var username: String = ""
     @State private var selectedColor: Color = Color.blue
     @State private var isAnimating: Bool = false
     @State private var currentPage: Int = 3
-    @State private var totalPages: Int = 3
-    @State private var navigateToMainView: Bool = false
+    @State private var totalPages: Int = 4
+    @State private var navigateToGroupCreation: Bool = false
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String? = nil
     @State private var apnsToken: String? = nil
@@ -148,12 +149,16 @@ struct UsernameView: View {
                 .opacity((username.isEmpty || isSubmitting) ? 0.7 : 1)
                 
                 NavigationLink(
-                    destination: MainView()
-                        .navigationBarHidden(true),
-                    isActive: $navigateToMainView,
+                    destination: GroupCreationView()
+                        .navigationBarHidden(true)
+                        .environmentObject(dataService),
+                    isActive: $navigateToGroupCreation,
                     label: { EmptyView() }
                 )
                 .opacity(0)
+                .onChange(of: navigateToGroupCreation) { newValue in
+                    print("navigateToGroupCreation changed to: \(newValue)")
+                }
             }
             .padding(.horizontal, 40)
         }
@@ -193,13 +198,65 @@ struct UsernameView: View {
                     
                     print("User profile created successfully: \(response)")
                     
-                    // Now save the user locally and mark onboarding as complete
-                    dataService.saveUser(updatedUser, completeSetup: true)
+                    // Save the user locally but DON'T mark onboarding as complete yet
+                    // We want to go through the group creation step first
+                    dataService.saveUser(updatedUser, completeSetup: false)
                     
-                    // Navigate to main view on the main thread
+                    // Navigate to group creation view on the main thread
                     await MainActor.run {
                         isSubmitting = false
-                        navigateToMainView = true
+                        print("Navigation to GroupCreationView triggered: setting navigateToGroupCreation = true")
+                        
+                        // Navigate programmatically as an alternative approach
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let rootViewController = windowScene.windows.first?.rootViewController {
+                            
+                            // Find the navigation controller
+                            func findNavigationController(in controller: UIViewController) -> UINavigationController? {
+                                if let navController = controller as? UINavigationController {
+                                    return navController
+                                } else if let tabController = controller as? UITabBarController,
+                                          let selectedController = tabController.selectedViewController {
+                                    return findNavigationController(in: selectedController)
+                                } else if let presented = controller.presentedViewController {
+                                    return findNavigationController(in: presented)
+                                }
+                                
+                                for child in controller.children {
+                                    if let found = findNavigationController(in: child) {
+                                        return found
+                                    }
+                                }
+                                
+                                return nil
+                            }
+                            
+                            if let navController = findNavigationController(in: rootViewController) {
+                                print("Found navigation controller, attempting to push GroupCreationView")
+                                
+                                // Create the GroupCreationView and prepare for hosting
+                                let groupCreationView = GroupCreationView()
+                                    .environmentObject(dataService)
+                                
+                                // Create a hosting controller for the SwiftUI view
+                                let hostingController = UIHostingController(rootView: groupCreationView)
+                                
+                                // Push the view controller
+                                navController.pushViewController(hostingController, animated: true)
+                            } else {
+                                print("Could not find navigation controller, attempting to use binding")
+                                // Force a brief delay to ensure state changes have propagated
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    navigateToGroupCreation = true
+                                }
+                            }
+                        } else {
+                            print("Could not access root view controller, falling back to binding")
+                            // Force a brief delay to ensure state changes have propagated
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                navigateToGroupCreation = true
+                            }
+                        }
                     }
                 } catch let error as SupabaseError {
                     // Handle specific Supabase errors with more detailed messages

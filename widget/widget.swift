@@ -119,6 +119,9 @@ struct WhiteboardWidgetEntryView : View {
                 // Items positioned using their relative coordinates in the widget
                 ZStack {
                     ForEach(entry.whiteboard.items) { item in
+                        // Debug log for each item
+                        let _ = print("Widget showing item: id=\(item.id), position=\(item.position), rotation=\(item.rotation ?? 0), scale=\(item.scale ?? 1.0)")
+                        
                         WidgetItemView(item: item)
                             .position(item.position)
                             .rotationEffect(Angle(degrees: Double(item.rotation ?? 0)))

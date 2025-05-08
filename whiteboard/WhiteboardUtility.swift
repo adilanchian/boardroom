@@ -33,6 +33,17 @@ public class WhiteboardUtility {
             do {
                 let decoder = JSONDecoder()
                 let decoded = try decoder.decode([Whiteboard].self, from: data)
+                
+                // Debug log for loaded whiteboards
+                for (boardIndex, board) in decoded.enumerated() {
+                    print("📋 Loaded whiteboard \(boardIndex): \(board.name) with \(board.items.count) items")
+                    
+                    // Check scales of items
+                    for (itemIndex, item) in board.items.enumerated() {
+                        print("  📦 Item \(itemIndex): id=\(item.id), type=\(item.type), scale=\(item.scale ?? 1.0)")
+                    }
+                }
+                
                 return decoded
             } catch {
                 print("Error decoding whiteboards: \(error)")
@@ -44,6 +55,16 @@ public class WhiteboardUtility {
     
     // Save whiteboards to UserDefaults
     public static func saveWhiteboards(_ whiteboards: [Whiteboard]) {
+        // Debug log for whiteboards being saved
+        for (boardIndex, board) in whiteboards.enumerated() {
+            print("💾 Saving whiteboard \(boardIndex): \(board.name) with \(board.items.count) items")
+            
+            // Check scales of items
+            for (itemIndex, item) in board.items.enumerated() {
+                print("  📦 Item \(itemIndex): id=\(item.id), type=\(item.type), scale=\(item.scale ?? 1.0)")
+            }
+        }
+        
         do {
             let encoder = JSONEncoder()
             let encoded = try encoder.encode(whiteboards)
@@ -51,8 +72,9 @@ public class WhiteboardUtility {
             
             // Force sync to ensure data is written immediately
             sharedDefaults.synchronize()
+            print("✅ Successfully saved \(whiteboards.count) whiteboards to UserDefaults")
         } catch {
-            print("Error saving whiteboards: \(error)")
+            print("❌ Error saving whiteboards: \(error)")
         }
     }
 } 
