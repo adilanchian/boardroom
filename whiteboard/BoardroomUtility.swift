@@ -32,8 +32,32 @@ class BoardroomUtility {
     static func loadBoardrooms() -> [Boardroom] {
         if let data = sharedDefaults.data(forKey: boardroomsKey) {
             do {
+                // Use a decoder that properly handles fractional seconds
                 let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
+                
+                // Custom date decoding strategy
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                
+                decoder.dateDecodingStrategy = .custom({ decoder in
+                    let container = try decoder.singleValueContainer()
+                    let string = try container.decode(String.self)
+                    
+                    if let date = formatter.date(from: string) {
+                        return date
+                    }
+                    
+                    // Fallback to standard ISO8601
+                    if let date = ISO8601DateFormatter().date(from: string) {
+                        return date
+                    }
+                    
+                    throw DecodingError.dataCorruptedError(
+                        in: container,
+                        debugDescription: "Invalid date format: \(string)"
+                    )
+                })
+                
                 let decoded = try decoder.decode([Boardroom].self, from: data)
                 
                 // Debug log for loaded boardrooms
@@ -67,14 +91,26 @@ class BoardroomUtility {
             }
         }
         
+        // Create a copy to avoid mutation during encoding
+        let boardroomsCopy = boardrooms
+        
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
-            let encoded = try encoder.encode(boardrooms)
-            sharedDefaults.set(encoded, forKey: boardroomsKey)
+            let encoded = try encoder.encode(boardroomsCopy)
             
-            // Force sync to ensure data is written immediately
-            sharedDefaults.synchronize()
+            // Perform UserDefaults operation on the main thread to avoid potential issues
+            let defaults = sharedDefaults
+            if Thread.isMainThread {
+                defaults.set(encoded, forKey: boardroomsKey)
+                defaults.synchronize() // Force sync to ensure data is written immediately
+            } else {
+                DispatchQueue.main.async {
+                    defaults.set(encoded, forKey: boardroomsKey)
+                    defaults.synchronize() // Force sync to ensure data is written immediately
+                }
+            }
+            
             print("✅ Successfully saved \(boardrooms.count) boardrooms to UserDefaults")
         } catch {
             print("❌ Error saving boardrooms: \(error)")

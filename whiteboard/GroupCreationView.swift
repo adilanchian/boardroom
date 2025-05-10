@@ -149,6 +149,19 @@ struct GroupCreationView: View {
             
             print("Boardroom created successfully: \(boardroomName) (ID: \(boardroom.id))")
             
+            // Also save to local DataService so it appears in the boards list
+            let localBoardroom = Boardroom(
+                id: boardroom.id,
+                name: boardroom.name,
+                items: [],
+                createdBy: boardroom.createdBy,
+                createdAt: boardroom.createdAt,
+                updatedAt: boardroom.updatedAt
+            )
+            
+            // Save to local storage
+            dataService.saveBoardroom(localBoardroom)
+            
             // Mark onboarding as complete
             dataService.completeOnboarding()
             

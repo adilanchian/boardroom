@@ -148,6 +148,9 @@ struct BoardsView: View {
         isLoading = true
         errorMessage = nil
         
+        // First, sync with Supabase to get the latest data
+        await dataService.syncBoardroomsFromSupabase()
+        
         // Get boardrooms from data service
         let fetchedBoardrooms = dataService.getAllBoardrooms()
         
@@ -164,23 +167,41 @@ struct BoardsView: View {
     
     // Create a new boardroom
     private func createBoardroom(name: String) async {
-        // Create boardroom using dataService
-        let userId = dataService.currentUser?.id ?? "unknown"
-        let boardroom = Boardroom(
-            id: UUID().uuidString,
-            name: name,
-            items: [],
-            createdBy: userId,
-            createdAt: Date(),
-            updatedAt: Date()
-        )
+        guard let currentUser = dataService.currentUser else { return }
         
-        // Save the new boardroom
-        dataService.saveBoardroom(boardroom)
-        print("Created boardroom: \(boardroom.name) with ID: \(boardroom.id)")
-        
-        // Refresh the boardrooms list
-        await loadBoardrooms()
+        do {
+            // First create in Supabase (this can run on a background thread)
+            let supabaseBoardroom = try await SupabaseManager.shared.createBoardroom(name: name)
+            print("Created boardroom in Supabase: \(name) with ID: \(supabaseBoardroom.id)")
+            
+            // Then sync to get the latest data including the new boardroom
+            await dataService.syncBoardroomsFromSupabase()
+            
+            // Refresh the boardrooms list
+            await loadBoardrooms()
+        } catch {
+            print("Error creating boardroom in Supabase: \(error.localizedDescription)")
+            
+            // Fallback to local creation if Supabase fails
+            let userId = currentUser.id
+            let boardroom = Boardroom(
+                id: UUID().uuidString,
+                name: name,
+                items: [],
+                createdBy: userId,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            
+            // Save the new boardroom locally
+            await MainActor.run {
+                dataService.saveBoardroom(boardroom)
+                print("Created local boardroom: \(boardroom.name) with ID: \(boardroom.id)")
+            }
+            
+            // Refresh the boardrooms list
+            await loadBoardrooms()
+        }
     }
 }
 

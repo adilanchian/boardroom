@@ -2,6 +2,36 @@ import Foundation
 import SwiftUI
 import Supabase
 
+// Define a custom date decoder at the top of the file
+extension JSONDecoder {
+    static func boardroomDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        decoder.dateDecodingStrategy = .custom({ decoder in
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self)
+            
+            if let date = formatter.date(from: string) {
+                return date
+            }
+            
+            // Fallback to standard ISO8601
+            if let date = ISO8601DateFormatter().date(from: string) {
+                return date
+            }
+            
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid date format: \(string)"
+            )
+        })
+        
+        return decoder
+    }
+}
+
 class BoardroomDataService {
     private let supabase = SupabaseManager.shared.client
     
@@ -19,8 +49,7 @@ class BoardroomDataService {
         // Data is non-optional, no need to check against nil
         let jsonData = response.data
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = JSONDecoder.boardroomDecoder()
         
         let boardrooms = try decoder.decode([Boardroom].self, from: jsonData)
         guard let boardroom = boardrooms.first else {
@@ -50,8 +79,7 @@ class BoardroomDataService {
         // Data is non-optional, no need to check against nil
         let boardroomData = boardroomResponse.data
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = JSONDecoder.boardroomDecoder()
         
         let boardrooms = try decoder.decode([Boardroom].self, from: boardroomData)
         guard var boardroom = boardrooms.first else {
@@ -79,6 +107,7 @@ class BoardroomDataService {
     func saveItem(item: BoardroomItem) async throws -> BoardroomItem {
         // Format date strings for JSON
         let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let createdAtStr = dateFormatter.string(from: item.createdAt)
         let updatedAtStr = dateFormatter.string(from: item.updatedAt)
         
@@ -115,8 +144,7 @@ class BoardroomDataService {
         // Data is non-optional, decode directly
         let responseData = response.data
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = JSONDecoder.boardroomDecoder()
         
         let items = try decoder.decode([BoardroomItem].self, from: responseData)
         guard let savedItem = items.first else {
@@ -146,8 +174,7 @@ class BoardroomDataService {
         // Data is non-optional, decode directly
         let data = response.data
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = JSONDecoder.boardroomDecoder()
         
         return try decoder.decode([Boardroom].self, from: data)
     }
@@ -166,8 +193,7 @@ class BoardroomDataService {
         // Data is non-optional, decode directly
         let responseData = response.data
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = JSONDecoder.boardroomDecoder()
         
         let members = try decoder.decode([BoardroomMember].self, from: responseData)
         guard let member = members.first else {
@@ -199,8 +225,7 @@ class BoardroomDataService {
         // Data is non-optional, decode directly
         let data = response.data
         
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = JSONDecoder.boardroomDecoder()
         
         return try decoder.decode([BoardroomMember].self, from: data)
     }

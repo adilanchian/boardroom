@@ -1,6 +1,15 @@
 import Foundation
 import SwiftUI
 
+// Create a standard date formatter that supports fractional seconds
+extension ISO8601DateFormatter {
+    static let shared: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+}
+
 // Boardroom model
 struct Boardroom: Identifiable, Codable {
     var id: String
@@ -42,7 +51,7 @@ struct Boardroom: Identifiable, Codable {
         // Handle date fields which could be strings or actual dates
         if let createdAtString = try? container.decode(String.self, forKey: .createdAt) {
             // Try to decode date from string (from API)
-            if let date = ISO8601DateFormatter().date(from: createdAtString) {
+            if let date = ISO8601DateFormatter.shared.date(from: createdAtString) {
                 createdAt = date
             } else {
                 createdAt = Date()
@@ -55,7 +64,7 @@ struct Boardroom: Identifiable, Codable {
         
         if let updatedAtString = try? container.decode(String.self, forKey: .updatedAt) {
             // Try to decode date from string
-            if let date = ISO8601DateFormatter().date(from: updatedAtString) {
+            if let date = ISO8601DateFormatter.shared.date(from: updatedAtString) {
                 updatedAt = date
             } else {
                 updatedAt = Date()
@@ -164,7 +173,7 @@ struct BoardroomItem: Identifiable, Codable {
         
         // Handle date fields which could be strings or actual dates
         if let createdAtString = try? container.decode(String.self, forKey: .createdAt) {
-            if let date = ISO8601DateFormatter().date(from: createdAtString) {
+            if let date = ISO8601DateFormatter.shared.date(from: createdAtString) {
                 createdAt = date
             } else {
                 createdAt = Date()
@@ -175,7 +184,7 @@ struct BoardroomItem: Identifiable, Codable {
         }
         
         if let updatedAtString = try? container.decode(String.self, forKey: .updatedAt) {
-            if let date = ISO8601DateFormatter().date(from: updatedAtString) {
+            if let date = ISO8601DateFormatter.shared.date(from: updatedAtString) {
                 updatedAt = date
             } else {
                 updatedAt = Date()
@@ -213,7 +222,7 @@ struct BoardroomMember: Codable, Identifiable {
         
         // Handle date fields which could be strings or actual dates
         if let joinedAtString = try? container.decode(String.self, forKey: .joinedAt) {
-            if let date = ISO8601DateFormatter().date(from: joinedAtString) {
+            if let date = ISO8601DateFormatter.shared.date(from: joinedAtString) {
                 joinedAt = date
             } else {
                 joinedAt = Date()

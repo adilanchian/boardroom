@@ -66,6 +66,52 @@ class DataService: ObservableObject {
         boardrooms = BoardroomUtility.loadBoardrooms()
     }
     
+    // Sync boardrooms from Supabase to local storage
+    func syncBoardroomsFromSupabase() async {
+        guard let currentUser = currentUser else { return }
+        
+        do {
+            // Fetch boardrooms from Supabase
+            let supabaseBoardrooms = try await SupabaseManager.shared.getUserBoardrooms()
+            print("Syncing \(supabaseBoardrooms.count) boardrooms from Supabase")
+            
+            // Keep track of which Supabase boardrooms we've processed
+            var processedIds = Set<String>()
+            var updatedBoardrooms = [Boardroom]()
+            
+            // First, make a copy of the current boardrooms
+            await MainActor.run {
+                updatedBoardrooms = self.boardrooms
+            }
+            
+            // Update existing boardrooms and add new ones
+            for boardroom in supabaseBoardrooms {
+                processedIds.insert(boardroom.id)
+                
+                // Check if this boardroom already exists locally
+                if let index = updatedBoardrooms.firstIndex(where: { $0.id == boardroom.id }) {
+                    // Update existing boardroom but keep its items
+                    var updatedBoardroom = boardroom
+                    updatedBoardroom.items = updatedBoardrooms[index].items
+                    updatedBoardrooms[index] = updatedBoardroom
+                } else {
+                    // Add new boardroom
+                    updatedBoardrooms.append(boardroom)
+                }
+            }
+            
+            // Update the published property on the main thread
+            await MainActor.run {
+                self.boardrooms = updatedBoardrooms
+                // Save updated boardrooms to local storage
+                self.saveBoardrooms()
+            }
+            
+        } catch {
+            print("Error syncing boardrooms from Supabase: \(error.localizedDescription)")
+        }
+    }
+    
     func saveBoardrooms() {
         BoardroomUtility.saveBoardrooms(boardrooms)
         
@@ -90,6 +136,8 @@ class DataService: ObservableObject {
     }
     
     func updateBoardroom(_ boardroom: Boardroom) {
+        assert(Thread.isMainThread, "updateBoardroom must be called from the main thread")
+        
         if let index = boardrooms.firstIndex(where: { $0.id == boardroom.id }) {
             boardrooms[index] = boardroom
             
@@ -154,7 +202,15 @@ class DataService: ObservableObject {
     
     // Save a boardroom (updates existing or adds new)
     func saveBoardroom(_ boardroom: Boardroom) {
-        updateBoardroom(boardroom)
+        // Make sure we're on the main thread when updating published properties
+        if Thread.isMainThread {
+            updateBoardroom(boardroom)
+        } else {
+            // Dispatch to the main thread if we're not already there
+            DispatchQueue.main.async {
+                self.updateBoardroom(boardroom)
+            }
+        }
     }
 } 
 

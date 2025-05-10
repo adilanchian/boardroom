@@ -32,6 +32,11 @@ struct MainView: View {
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
         }
+        .task {
+            // Sync boardrooms from Supabase in a task instead of onAppear
+            // This is more thread-safe and allows async/await
+            await dataService.syncBoardroomsFromSupabase()
+        }
     }
 }
 

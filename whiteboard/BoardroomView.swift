@@ -302,9 +302,20 @@ struct BoardroomView: View {
     
     // MARK: - Helper Methods
     
+    private func formatDateForDisplay(dateString: String) -> String {
+        guard let date = ISO8601DateFormatter.shared.date(from: dateString) else {
+            return "Unknown date"
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
     private func formatDate(_ dateString: String) -> String {
         // Convert string date to a readable format
-        guard let date = ISO8601DateFormatter().date(from: dateString) else {
+        guard let date = ISO8601DateFormatter.shared.date(from: dateString) else {
             return "recently"
         }
         
