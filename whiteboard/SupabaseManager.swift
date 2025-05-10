@@ -97,7 +97,7 @@ class SupabaseManager {
         }
     }
     
-    // Fetch the latest user profile data from Supabase using JWT auth
+    /// Fetch user profile using the Supabase function
     func fetchUserProfile() async throws -> User {
         // Log for debugging
         print("Fetching user profile using direct database access")
@@ -168,7 +168,7 @@ class SupabaseManager {
             let userId = session.user.id.uuidString
             
             // 1. Insert the boardroom
-            let newBoardroom: Boardroom = try await client.database
+            let newBoardroom: Boardroom = try await client
                 .from("boardrooms")
                 .insert([
                     "name": name,
@@ -182,7 +182,7 @@ class SupabaseManager {
             print("Boardroom created successfully: \(newBoardroom.name) (ID: \(newBoardroom.id))")
             
             // 2. Add creator as a member
-            try await client.database
+            try await client
                 .from("boardroom_members")
                 .insert([
                     "boardroom_id": newBoardroom.id,
@@ -219,7 +219,7 @@ class SupabaseManager {
             let userId = session.user.id.uuidString
             
             // Query boardrooms created by this user
-            let createdBoardrooms: [Boardroom] = try await client.database
+            let createdBoardrooms: [Boardroom] = try await client
                 .from("boardrooms")
                 .select("id, name")
                 .eq("created_by", value: userId)
@@ -247,7 +247,7 @@ class SupabaseManager {
             let userId = session.user.id.uuidString
             
             // Query boardrooms created by this user
-            let createdBoardrooms: [Boardroom] = try await client.database
+            let createdBoardrooms: [Boardroom] = try await client
                 .from("boardrooms")
                 .select("id, name, created_by, created_at")
                 .eq("created_by", value: userId)
@@ -275,12 +275,12 @@ class SupabaseManager {
         
         do {
             // Ensure we have an authenticated session
-            let session = try await client.auth.session
+            _ = try await client.auth.session
             
             // No need to verify if current user is creator - RLS policy handles that
             
             // Insert the new member
-            try await client.database
+            try await client
                 .from("boardroom_members")
                 .insert([
                     "boardroom_id": boardroomId,
@@ -324,12 +324,12 @@ class SupabaseManager {
         
         do {
             // Ensure we have an authenticated session
-            let session = try await client.auth.session
+            _ = try await client.auth.session
             
             // No need to verify if current user is creator - RLS policy handles that
             
             // Delete the member record
-            try await client.database
+            try await client
                 .from("boardroom_members")
                 .delete()
                 .eq("boardroom_id", value: boardroomId)
@@ -367,10 +367,10 @@ class SupabaseManager {
         
         do {
             // Ensure we have an authenticated session
-            let session = try await client.auth.session
+            _ = try await client.auth.session
             
             // Query members of the boardroom
-            let members: [BoardroomMember] = try await client.database
+            let members: [BoardroomMember] = try await client
                 .from("boardroom_members")
                 .select("user_id, boardroom_id, joined_at")
                 .eq("boardroom_id", value: boardroomId)
@@ -420,7 +420,7 @@ class SupabaseManager {
             }
             
             // Try to find the user by their email in the profiles table
-            let profiles: [UserProfile] = try await client.database
+            let profiles: [UserProfile] = try await client
                 .from("profiles")
                 .select("id, email")
                 .eq("email", value: email)
@@ -473,7 +473,7 @@ class SupabaseManager {
             let targetUserId = userId ?? session.user.id.uuidString
             
             // Query the profile from the database
-            let profile: Profile = try await client.database
+            let profile: Profile = try await client
                 .from("profiles")
                 .select("id, username, selected_color, updated_at")
                 .eq("id", value: targetUserId)
@@ -529,7 +529,7 @@ class SupabaseManager {
             let userId = session.user.id.uuidString
             
             // Insert the profile
-            let profile: Profile = try await client.database
+            let profile: Profile = try await client
                 .from("profiles")
                 .insert([
                     "id": userId,
