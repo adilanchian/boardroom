@@ -64,25 +64,6 @@ class DataService: ObservableObject {
     
     func loadBoardrooms() {
         boardrooms = BoardroomUtility.loadBoardrooms()
-        
-        // If no boardrooms, create a sample one
-        if boardrooms.isEmpty {
-            let sampleBoard = Boardroom(
-                name: "Sample Board",
-                items: [
-                    BoardroomItem(
-                        boardroomId: UUID().uuidString,
-                        type: .text,
-                        content: "Welcome to your boardroom!",
-                        position: CGPoint(x: 180, y: 180),
-                        createdBy: "System"
-                    )
-                ],
-                createdBy: "System"
-            )
-            boardrooms.append(sampleBoard)
-            saveBoardrooms()
-        }
     }
     
     func saveBoardrooms() {

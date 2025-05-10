@@ -10,6 +10,7 @@ struct VerificationCodeView: View {
     @State private var navigateToNextScreen: Bool = false
     @State private var isVerifying: Bool = false
     @State private var errorMessage: String? = nil
+    @State private var navigateToGroupCreation: Bool = false
     @EnvironmentObject private var dataService: DataService
     @Environment(\.presentationMode) var presentationMode
     
@@ -122,6 +123,14 @@ struct VerificationCodeView: View {
                     label: { EmptyView() }
                 )
                 .opacity(0)
+                NavigationLink(
+                    destination: GroupCreationView()
+                        .navigationBarHidden(true)
+                        .environmentObject(dataService),
+                    isActive: $navigateToGroupCreation,
+                    label: { EmptyView() }
+                )
+                .opacity(0)
             }
             .padding(.horizontal, 40)
         }
@@ -158,18 +167,40 @@ struct VerificationCodeView: View {
                 // User has an existing profile, store it and mark onboarding as complete
                 dataService.saveUser(userProfile, completeSetup: true)
                 
-                // Navigate directly to main view, skipping the username setup
-                isVerifying = false
-                // Use a different navigation path that goes straight to the main view
-                DispatchQueue.main.async {
-                    // Override previous user to ensure we have the latest data
-                    dataService.currentUser = userProfile
-                    // Skip to main by flagging onboarding as complete
-                    dataService.completeOnboarding()
-                    // Tell the app to refresh its view structure
-                    NotificationCenter.default.post(name: NSNotification.Name("RefreshRootView"), object: nil)
-                    // Return to root (resets navigation stack)
-                    self.presentationMode.wrappedValue.dismiss()
+                // Check if user has any boardrooms
+                do {
+                    let boardrooms = try await SupabaseManager.shared.getUserBoardrooms()
+                    isVerifying = false
+                    DispatchQueue.main.async {
+                        if boardrooms.isEmpty {
+                            // Navigate to GroupCreationView
+                            navigateToGroupCreation = true
+                        } else {
+                            // User has boardrooms, complete onboarding and go to main
+                            dataService.currentUser = userProfile
+                            dataService.completeOnboarding()
+                            NotificationCenter.default.post(name: NSNotification.Name("RefreshRootView"), object: nil)
+                            self.presentationMode.wrappedValue.dismiss()
+                        }
+                    }
+                } catch {
+                    // Handle the recursion error (treat as if no boardrooms exist)
+                    print("Error fetching boardrooms: \(error.localizedDescription)")
+                    
+                    if error.localizedDescription.contains("infinite recursion") {
+                        print("Detected infinite recursion error in policy - treating as no boardrooms")
+                        isVerifying = false
+                        DispatchQueue.main.async {
+                            // Navigate to GroupCreationView
+                            navigateToGroupCreation = true
+                        }
+                    } else {
+                        // For other errors, still go to group creation as fallback
+                        isVerifying = false
+                        DispatchQueue.main.async {
+                            navigateToGroupCreation = true
+                        }
+                    }
                 }
                 return
             } catch let profileError as SupabaseError {
