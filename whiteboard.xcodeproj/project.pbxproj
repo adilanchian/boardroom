@@ -53,19 +53,17 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		709E25E22DCFEA0800CC3CA0 /* Exceptions for "whiteboard" folder in "widgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BoardroomModels.swift,
+			);
+			target = 70D8BC122D94D5CA00996560 /* widgetExtension */;
+		};
 		70D8BC242D94D5CB00996560 /* Exceptions for "widget" folder in "widgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-			);
-			target = 70D8BC122D94D5CA00996560 /* widgetExtension */;
-		};
-		70D8BC432D94D96000996560 /* Exceptions for "whiteboard" folder in "widgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				WhiteboardExtensions.swift,
-				WhiteboardModels.swift,
-				WhiteboardUtility.swift,
 			);
 			target = 70D8BC122D94D5CA00996560 /* widgetExtension */;
 		};
@@ -75,7 +73,7 @@
 		70D8BBF82D94D33300996560 /* whiteboard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				70D8BC432D94D96000996560 /* Exceptions for "whiteboard" folder in "widgetExtension" target */,
+				709E25E22DCFEA0800CC3CA0 /* Exceptions for "whiteboard" folder in "widgetExtension" target */,
 			);
 			path = whiteboard;
 			sourceTree = "<group>";
@@ -425,6 +423,7 @@
 				DEVELOPMENT_TEAM = UWMZP3Q26H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = boardroom;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow access to add photos to your whiteboard";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -456,6 +455,7 @@
 				DEVELOPMENT_TEAM = UWMZP3Q26H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = boardroom;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow access to add photos to your whiteboard";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

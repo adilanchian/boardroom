@@ -1,6 +1,6 @@
 //
-//  whiteboardApp.swift
-//  whiteboard
+//  boardroomApp.swift
+//  boardroom
 //
 //  Created by alec on 3/26/25.
 //
@@ -10,10 +10,10 @@ import UIKit
 
 // Add photo library usage permission to Info.plist
 // IMPORTANT: Add this key to your project settings:
-// - NSPhotoLibraryUsageDescription: "Allow access to add photos to your whiteboard"
+// - NSPhotoLibraryUsageDescription: "Allow access to add photos to your boardroom"
 
 @main
-struct whiteboardApp: App {
+struct boardroomApp: App {
     @StateObject private var dataService = DataService()
     @State private var isCheckingSession = true
     

@@ -8,25 +8,6 @@
 import Foundation
 import Supabase
 
-// Define the Group model
-struct Group: Identifiable, Codable, Equatable {
-    let id: String
-    let name: String
-    let createdBy: String
-    let createdAt: String
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case createdBy = "created_by"
-        case createdAt = "created_at"
-    }
-    
-    static func == (lhs: Group, rhs: Group) -> Bool {
-        return lhs.id == rhs.id
-    }
-}
-
 // Custom errors for better error handling
 enum SupabaseError: Error {
     case invalidResponse
@@ -51,24 +32,6 @@ enum SupabaseError: Error {
         case .profileNotFound:
             return "User profile not found"
         }
-    }
-}
-
-// Define a GroupMember model
-struct GroupMember: Identifiable, Codable {
-    let userId: String
-    let groupId: String
-    let joinedAt: String
-    
-    // Since we use a composite primary key, we need a computed id
-    var id: String {
-        return "\(groupId)_\(userId)"
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case groupId = "group_id"
-        case joinedAt = "joined_at"
     }
 }
 
@@ -188,11 +151,11 @@ class SupabaseManager {
         }
     }
     
-    /// Create a new group and automatically add the current user as a member
-    /// - Parameter name: The name of the group to create
-    /// - Returns: The newly created group
-    func createGroup(name: String) async throws -> Group {
-        print("Creating group with name: \(name)")
+    /// Create a new boardroom and automatically add the current user as a member
+    /// - Parameter name: The name of the boardroom to create
+    /// - Returns: The newly created boardroom
+    func createBoardroom(name: String) async throws -> Boardroom {
+        print("Creating boardroom with name: \(name)")
         
         // Validate input
         guard !name.isEmpty else {
@@ -204,9 +167,9 @@ class SupabaseManager {
             let session = try await client.auth.session
             let userId = session.user.id.uuidString
             
-            // 1. Insert the group
-            let newGroup: Group = try await client.database
-                .from("groups")
+            // 1. Insert the boardroom
+            let newBoardroom: Boardroom = try await client.database
+                .from("boardrooms")
                 .insert([
                     "name": name,
                     "created_by": userId
@@ -216,99 +179,99 @@ class SupabaseManager {
                 .execute()
                 .value
             
-            print("Group created successfully: \(newGroup.name) (ID: \(newGroup.id))")
+            print("Boardroom created successfully: \(newBoardroom.name) (ID: \(newBoardroom.id))")
             
             // 2. Add creator as a member
             try await client.database
-                .from("group_members")
+                .from("boardroom_members")
                 .insert([
-                    "group_id": newGroup.id,
+                    "boardroom_id": newBoardroom.id,
                     "user_id": userId
                 ])
                 .execute()
             
-            print("Added creator as member to the group")
+            print("Added creator as member to the boardroom")
             
-            return newGroup
+            return newBoardroom
             
         } catch let error as PostgrestError {
             // Handle specific database errors
-            print("Database error creating group: \(error.message)")
+            print("Database error creating boardroom: \(error.message)")
             
             if error.message.contains("permission denied") {
-                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to create groups")
+                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to create boardrooms")
             }
             
             throw SupabaseError.networkError(error)
         } catch {
-            print("Error creating group: \(error.localizedDescription)")
+            print("Error creating boardroom: \(error.localizedDescription)")
             throw SupabaseError.networkError(error)
         }
     }
     
-    // Function to check if the current user has created any groups
-    func checkUserGroups() async throws -> [String] {
-        print("Checking if user has created any groups")
+    // Function to check if the current user has created any boardrooms
+    func checkUserBoardrooms() async throws -> [String] {
+        print("Checking if user has created any boardrooms")
         
         do {
             // Get the current user's ID
             let session = try await client.auth.session
             let userId = session.user.id.uuidString
             
-            // Query groups created by this user
-            let createdGroups: [Group] = try await client.database
-                .from("groups")
+            // Query boardrooms created by this user
+            let createdBoardrooms: [Boardroom] = try await client.database
+                .from("boardrooms")
                 .select("id, name")
                 .eq("created_by", value: userId)
                 .execute()
                 .value
             
-            let groupIds = createdGroups.map { $0.id }
-            print("User has created \(groupIds.count) groups")
-            return groupIds
+            let boardroomIds = createdBoardrooms.map { $0.id }
+            print("User has created \(boardroomIds.count) boardrooms")
+            return boardroomIds
             
         } catch {
-            print("Error checking user groups: \(error.localizedDescription)")
+            print("Error checking user boardrooms: \(error.localizedDescription)")
             throw SupabaseError.networkError(error)
         }
     }
     
-    /// Fetch groups created by the current user
-    /// - Returns: Array of groups created by the user
-    func getUserGroups() async throws -> [Group] {
-        print("Fetching groups created by user")
+    /// Fetch boardrooms created by the current user
+    /// - Returns: Array of boardrooms created by the user
+    func getUserBoardrooms() async throws -> [Boardroom] {
+        print("Fetching boardrooms created by user")
         
         do {
             // Get the current user's ID
             let session = try await client.auth.session
             let userId = session.user.id.uuidString
             
-            // Query groups created by this user
-            let createdGroups: [Group] = try await client.database
-                .from("groups")
+            // Query boardrooms created by this user
+            let createdBoardrooms: [Boardroom] = try await client.database
+                .from("boardrooms")
                 .select("id, name, created_by, created_at")
                 .eq("created_by", value: userId)
                 .execute()
                 .value
             
-            print("Found \(createdGroups.count) groups created by user")
-            return createdGroups
+            print("Found \(createdBoardrooms.count) boardrooms created by user")
+            return createdBoardrooms
             
         } catch {
-            print("Error fetching groups: \(error.localizedDescription)")
+            print("Error fetching boardrooms: \(error.localizedDescription)")
             throw SupabaseError.networkError(error)
         }
     }
     
-    // MARK: - Group Membership Management
+    // MARK: - Boardroom Membership Management
     
-    /// Add a user as a member to a group
+    /// Add a user as a member to a boardroom
     /// - Parameters:
-    ///   - groupId: The ID of the group to add the member to
+    ///   - boardroomId: The ID of the boardroom to add the member to
     ///   - userId: The ID of the user to add as a member
     /// - Returns: Boolean indicating success
-    func addMemberToGroup(groupId: String, userId: String) async throws -> Bool {
-        print("Adding user \(userId) to group \(groupId)")
+    func addMemberToBoardroom(boardroomId: String, userId: String) async throws -> Bool {
+        print("Adding user \(userId) to boardroom \(boardroomId)")
         
         do {
             // Ensure we have an authenticated session
@@ -318,14 +281,14 @@ class SupabaseManager {
             
             // Insert the new member
             try await client.database
-                .from("group_members")
+                .from("boardroom_members")
                 .insert([
-                    "group_id": groupId,
+                    "boardroom_id": boardroomId,
                     "user_id": userId
                 ])
                 .execute()
             
-            print("Successfully added user to group")
+            print("Successfully added user to boardroom")
             return true
             
         } catch let error as PostgrestError {
@@ -334,30 +297,30 @@ class SupabaseManager {
             
             // Check for common errors
             if error.message.contains("duplicate key") {
-                print("User is already a member of this group")
-                throw SupabaseError.functionError(statusCode: 409, message: "User is already a member of this group")
+                print("User is already a member of this boardroom")
+                throw SupabaseError.functionError(statusCode: 409, message: "User is already a member of this boardroom")
             } else if error.message.contains("foreign key constraint") {
-                print("Group or user does not exist")
-                throw SupabaseError.functionError(statusCode: 404, message: "Group or user not found")
+                print("Boardroom or user does not exist")
+                throw SupabaseError.functionError(statusCode: 404, message: "Boardroom or user not found")
             } else if error.message.contains("permission denied") {
-                print("Not authorized to add members to this group")
-                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to add members to this group")
+                print("Not authorized to add members to this boardroom")
+                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to add members to this boardroom")
             }
             
             throw SupabaseError.networkError(error)
         } catch {
-            print("Error adding member to group: \(error.localizedDescription)")
+            print("Error adding member to boardroom: \(error.localizedDescription)")
             throw SupabaseError.networkError(error)
         }
     }
 
-    /// Remove a user from a group
+    /// Remove a user from a boardroom
     /// - Parameters:
-    ///   - groupId: The ID of the group
+    ///   - boardroomId: The ID of the boardroom
     ///   - userId: The ID of the user to remove
     /// - Returns: Boolean indicating success
-    func removeMemberFromGroup(groupId: String, userId: String) async throws -> Bool {
-        print("Removing user \(userId) from group \(groupId)")
+    func removeMemberFromBoardroom(boardroomId: String, userId: String) async throws -> Bool {
+        print("Removing user \(userId) from boardroom \(boardroomId)")
         
         do {
             // Ensure we have an authenticated session
@@ -367,13 +330,13 @@ class SupabaseManager {
             
             // Delete the member record
             try await client.database
-                .from("group_members")
+                .from("boardroom_members")
                 .delete()
-                .eq("group_id", value: groupId)
+                .eq("boardroom_id", value: boardroomId)
                 .eq("user_id", value: userId)
                 .execute()
             
-            print("Successfully removed user from group")
+            print("Successfully removed user from boardroom")
             return true
             
         } catch let error as PostgrestError {
@@ -382,53 +345,53 @@ class SupabaseManager {
             
             // Check for common errors
             if error.message.contains("not found") {
-                print("User is not a member of this group")
-                throw SupabaseError.functionError(statusCode: 404, message: "User is not a member of this group")
+                print("User is not a member of this boardroom")
+                throw SupabaseError.functionError(statusCode: 404, message: "User is not a member of this boardroom")
             } else if error.message.contains("permission denied") {
-                print("Not authorized to remove members from this group")
-                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to remove members from this group")
+                print("Not authorized to remove members from this boardroom")
+                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to remove members from this boardroom")
             }
             
             throw SupabaseError.networkError(error)
         } catch {
-            print("Error removing member from group: \(error.localizedDescription)")
+            print("Error removing member from boardroom: \(error.localizedDescription)")
             throw SupabaseError.networkError(error)
         }
     }
 
-    /// Get all members of a group
-    /// - Parameter groupId: The ID of the group
-    /// - Returns: Array of group members
-    func getGroupMembers(groupId: String) async throws -> [GroupMember] {
-        print("Fetching members for group \(groupId)")
+    /// Get all members of a boardroom
+    /// - Parameter boardroomId: The ID of the boardroom
+    /// - Returns: Array of boardroom members
+    func getBoardroomMembers(boardroomId: String) async throws -> [BoardroomMember] {
+        print("Fetching members for boardroom \(boardroomId)")
         
         do {
             // Ensure we have an authenticated session
             let session = try await client.auth.session
             
-            // Query members of the group
-            let members: [GroupMember] = try await client.database
-                .from("group_members")
-                .select("user_id, group_id, joined_at")
-                .eq("group_id", value: groupId)
+            // Query members of the boardroom
+            let members: [BoardroomMember] = try await client.database
+                .from("boardroom_members")
+                .select("user_id, boardroom_id, joined_at")
+                .eq("boardroom_id", value: boardroomId)
                 .execute()
                 .value
             
-            print("Found \(members.count) members for group \(groupId)")
+            print("Found \(members.count) members for boardroom \(boardroomId)")
             return members
             
         } catch let error as PostgrestError {
             // Handle specific database errors
-            print("Database error fetching group members: \(error.message)")
+            print("Database error fetching boardroom members: \(error.message)")
             
             if error.message.contains("permission denied") {
-                print("Not authorized to view members of this group")
-                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to view members of this group")
+                print("Not authorized to view members of this boardroom")
+                throw SupabaseError.functionError(statusCode: 403, message: "Not authorized to view members of this boardroom")
             }
             
             throw SupabaseError.networkError(error)
         } catch {
-            print("Error fetching group members: \(error.localizedDescription)")
+            print("Error fetching boardroom members: \(error.localizedDescription)")
             throw SupabaseError.networkError(error)
         }
     }

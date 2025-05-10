@@ -2,7 +2,7 @@ import SwiftUI
 import Supabase
 
 struct GroupCreationView: View {
-    @State private var groupName: String = ""
+    @State private var boardroomName: String = ""
     @State private var isCreating: Bool = false
     @State private var errorMessage: String? = nil
     @State private var navigateToMain: Bool = false
@@ -35,15 +35,15 @@ struct GroupCreationView: View {
                 Spacer()
                 
                 // Title
-                Text("let's create a group")
+                Text("let's create a board")
                     .font(.system(.subheadline, design: .monospaced))
                     .fontWeight(.medium)
                     .onAppear {
                         print("Title text in GroupCreationView appeared")
                     }
                 
-                // Group name input field
-                TextField("Name (like the group-chat)", text: $groupName)
+                // Boardroom name input field
+                TextField("Name (like the board name)", text: $boardroomName)
                     .padding()
                     .font(.system(.subheadline, design: .monospaced))
                     .foregroundColor(.black)
@@ -65,7 +65,7 @@ struct GroupCreationView: View {
                 
                 // Create button
                 Button(action: {
-                    Task { await createGroup() }
+                    Task { await createBoardroom() }
                 }) {
                     if isCreating {
                         ProgressView()
@@ -74,7 +74,7 @@ struct GroupCreationView: View {
                         Text("create")
                             .font(.system(.subheadline, design: .monospaced))
                             .fontWeight(.medium)
-                            .foregroundColor(groupName.isEmpty ? .gray : .white)
+                            .foregroundColor(boardroomName.isEmpty ? .gray : .white)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -82,21 +82,21 @@ struct GroupCreationView: View {
                 .background(
                     Capsule()
                         .stroke(Color.gray, lineWidth: 1)
-                        .background(groupName.isEmpty ? Color.clear : Color.black)
+                        .background(boardroomName.isEmpty ? Color.clear : Color.black)
                 )
-                .foregroundColor(groupName.isEmpty ? .gray : .white)
+                .foregroundColor(boardroomName.isEmpty ? .gray : .white)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
-                .disabled(groupName.isEmpty || isCreating)
-                .opacity(groupName.isEmpty || isCreating ? 0.7 : 1)
+                .disabled(boardroomName.isEmpty || isCreating)
+                .opacity(boardroomName.isEmpty || isCreating ? 0.7 : 1)
             }
             .padding(.horizontal, 20)
         }
         .navigationBarHidden(true)
         .onAppear {
-            print("GroupCreationView appeared - checking for existing groups")
-            // Check if user is already in a group - if yes, skip this screen
-            checkExistingGroups()
+            print("GroupCreationView appeared - checking for existing boardrooms")
+            // Check if user is already in a boardroom - if yes, skip this screen
+            checkExistingBoardrooms()
         }
         .background(
             NavigationLink(
@@ -110,16 +110,16 @@ struct GroupCreationView: View {
         )
     }
     
-    // Check if user is already in any groups
-    private func checkExistingGroups() {
+    // Check if user is already in any boardrooms
+    private func checkExistingBoardrooms() {
         Task {
             do {
-                // Use SupabaseManager to check if user is in any groups
-                let groups = try await SupabaseManager.shared.checkUserGroups()
+                // Use SupabaseManager to check if user is in any boardrooms
+                let boardrooms = try await SupabaseManager.shared.getUserBoardrooms()
                 
-                // If user already has groups, skip this screen and go directly to main
-                if !groups.isEmpty {
-                    print("User already has \(groups.count) groups, skipping group creation")
+                // If user already has boardrooms, skip this screen and go directly to main
+                if !boardrooms.isEmpty {
+                    print("User already has \(boardrooms.count) boardrooms, skipping boardroom creation")
                     
                     // Mark onboarding as complete
                     dataService.completeOnboarding()
@@ -127,27 +127,27 @@ struct GroupCreationView: View {
                     // Navigate to main view
                     navigateToMain = true
                 } else {
-                    print("User has no groups, showing group creation screen")
+                    print("User has no boardrooms, showing boardroom creation screen")
                 }
             } catch {
-                // If there's an error checking groups, allow user to create one anyway
-                print("Error checking user groups: \(error.localizedDescription)")
+                // If there's an error checking boardrooms, allow user to create one anyway
+                print("Error checking user boardrooms: \(error.localizedDescription)")
             }
         }
     }
     
-    // Create a new group using Supabase function
-    private func createGroup() async {
-        guard !groupName.isEmpty else { return }
+    // Create a new boardroom using Supabase function
+    private func createBoardroom() async {
+        guard !boardroomName.isEmpty else { return }
         
         isCreating = true
         errorMessage = nil
         
         do {
-            // Use the SupabaseManager to create a group
-            let group = try await SupabaseManager.shared.createGroup(name: groupName)
+            // Use the SupabaseManager to create a boardroom
+            let boardroom = try await SupabaseManager.shared.createBoardroom(name: boardroomName)
             
-            print("Group created successfully: \(groupName) (ID: \(group.id))")
+            print("Boardroom created successfully: \(boardroomName) (ID: \(boardroom.id))")
             
             // Mark onboarding as complete
             dataService.completeOnboarding()
@@ -162,18 +162,18 @@ struct GroupCreationView: View {
             // Handle specific Supabase errors with detailed messages
             switch error {
             case .functionError(_, let message):
-                errorMessage = "Couldn't create group: \(message)"
+                errorMessage = "Couldn't create board: \(message)"
             case .invalidUserData:
-                errorMessage = "Please enter a valid group name"
+                errorMessage = "Please enter a valid board name"
             default:
-                errorMessage = "Couldn't create group. Please try again."
+                errorMessage = "Couldn't create board. Please try again."
             }
             
-            print("Error creating group: \(error.localizedDescription)")
+            print("Error creating boardroom: \(error.localizedDescription)")
         } catch {
             isCreating = false
-            errorMessage = "Couldn't create group. Please try again."
-            print("Error creating group: \(error.localizedDescription)")
+            errorMessage = "Couldn't create board. Please try again."
+            print("Error creating boardroom: \(error.localizedDescription)")
         }
     }
 }

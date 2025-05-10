@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BoardsView: View {
-    @State private var groups: [Group] = []
+    @State private var boardrooms: [Boardroom] = []
     @State private var isLoading = true
     @State private var errorMessage: String? = nil
     @State private var showingNewBoardSheet = false
@@ -10,7 +10,7 @@ struct BoardsView: View {
     private let backgroundColor = Color(hex: "E8E9E2")
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // Background
                 backgroundColor.ignoresSafeArea()
@@ -43,7 +43,7 @@ struct BoardsView: View {
                                 
                             Button(action: {
                                 Task {
-                                    await loadGroups()
+                                    await loadBoardrooms()
                                 }
                             }) {
                                 Text("try again")
@@ -57,7 +57,7 @@ struct BoardsView: View {
                             }
                         }
                         Spacer()
-                    } else if groups.isEmpty {
+                    } else if boardrooms.isEmpty {
                         // Empty state
                         Spacer()
                         VStack(spacing: 16) {
@@ -88,8 +88,13 @@ struct BoardsView: View {
                         // List of boards
                         ScrollView {
                             LazyVStack(spacing: 16) {
-                                ForEach(groups) { group in
-                                    GroupCard(group: group)
+                                ForEach(boardrooms) { boardroom in
+                                    NavigationLink(destination: BoardroomDetailView(boardroom: boardroom)) {
+                                        BoardroomCard(boardroom: boardroom) {
+                                            // The action is handled by the NavigationLink
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
                                 .padding(.horizontal)
                             }
@@ -119,10 +124,10 @@ struct BoardsView: View {
                 }
             }
             .sheet(isPresented: $showingNewBoardSheet) {
-                CreateBoardView(onBoardCreated: { newGroupName in
+                CreateBoardView(onBoardCreated: { newBoardName in
                     Task {
-                        if !newGroupName.isEmpty {
-                            await createBoard(name: newGroupName)
+                        if !newBoardName.isEmpty {
+                            await createBoardroom(name: newBoardName)
                         }
                     }
                 })
@@ -130,116 +135,52 @@ struct BoardsView: View {
             }
             .navigationBarHidden(true)
             .task {
-                await loadGroups()
+                await loadBoardrooms()
             }
             .refreshable {
-                await loadGroups()
+                await loadBoardrooms()
             }
         }
     }
     
-    // Load groups from the server
-    private func loadGroups() async {
+    // Load boardrooms from the service
+    private func loadBoardrooms() async {
         isLoading = true
         errorMessage = nil
         
-        do {
-            let fetchedGroups = try await SupabaseManager.shared.getUserGroups()
-            
-            // Sort groups by most recently created
-            let sortedGroups = fetchedGroups.sorted { 
-                // Assuming createdAt is in ISO format, this string comparison should work
-                $0.createdAt > $1.createdAt
-            }
-            
-            await MainActor.run {
-                groups = sortedGroups
-                isLoading = false
-            }
-        } catch {
-            await MainActor.run {
-                errorMessage = error.localizedDescription
-                isLoading = false
-            }
-        }
-    }
-    
-    // Create a new board/group
-    private func createBoard(name: String) async {
-        do {
-            // Create group using SupabaseManager
-            let group = try await SupabaseManager.shared.createGroup(name: name)
-            print("Created board: \(group.name) with ID: \(group.id)")
-            
-            // Refresh the groups list
-            await loadGroups()
-        } catch {
-            print("Error creating board: \(error.localizedDescription)")
-            errorMessage = "Failed to create board: \(error.localizedDescription)"
-        }
-    }
-}
-
-// Card view for individual group/board
-struct GroupCard: View {
-    let group: Group
-    @State private var navigateToDetail = false
-    
-    var body: some View {
-        ZStack {
-            Button(action: {
-                // Navigate to the board details
-                print("Selected board: \(group.name)")
-                navigateToDetail = true
-            }) {
-                HStack {
-                    // Board info
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(group.name)
-                            .font(.system(.headline, design: .monospaced))
-                            .foregroundColor(.black)
-                        
-                        let dateStr = formatDate(group.createdAt)
-                        Text("Created \(dateStr)")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    Spacer()
-                    
-                    // Chevron
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.black)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                )
-            }
-            
-            NavigationLink(
-                destination: BoardDetailView(group: group),
-                isActive: $navigateToDetail,
-                label: { EmptyView() }
-            )
-            .opacity(0)
-        }
-    }
-    
-    // Format ISO date string to readable format
-    private func formatDate(_ isoString: String) -> String {
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        // Get boardrooms from data service
+        let fetchedBoardrooms = dataService.getAllBoardrooms()
         
-        if let date = isoFormatter.date(from: isoString) {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .short
-            return formatter.localizedString(for: date, relativeTo: Date())
+        // Sort boardrooms by most recently created
+        let sortedBoardrooms = fetchedBoardrooms.sorted { 
+            $0.createdAt > $1.createdAt
         }
         
-        return "recently"
+        await MainActor.run {
+            boardrooms = sortedBoardrooms
+            isLoading = false
+        }
+    }
+    
+    // Create a new boardroom
+    private func createBoardroom(name: String) async {
+        // Create boardroom using dataService
+        let userId = dataService.currentUser?.id ?? "unknown"
+        let boardroom = Boardroom(
+            id: UUID().uuidString,
+            name: name,
+            items: [],
+            createdBy: userId,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        
+        // Save the new boardroom
+        dataService.saveBoardroom(boardroom)
+        print("Created boardroom: \(boardroom.name) with ID: \(boardroom.id)")
+        
+        // Refresh the boardrooms list
+        await loadBoardrooms()
     }
 }
 

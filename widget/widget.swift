@@ -9,10 +9,10 @@ import WidgetKit
 import SwiftUI
 
 // The App Group identifier for sharing data with the main app
-let appGroupIdentifier = "group.wndn.studio.whiteboard"
+let appGroupIdentifier = "group.wndn.studio.boardroom"
 
-// Key for accessing whiteboards in UserDefaults
-let whiteboardsKey = "saved_whiteboards"
+// Key for accessing boardrooms in UserDefaults
+let boardroomsKey = "saved_boardrooms"
 
 // Get shared UserDefaults from the App Group
 var sharedDefaults: UserDefaults {
@@ -20,37 +20,41 @@ var sharedDefaults: UserDefaults {
 }
 
 struct Provider: TimelineProvider {
-    func placeholder(in context: Context) -> WhiteboardEntry {
-        WhiteboardEntry(
+    func placeholder(in context: Context) -> BoardroomEntry {
+        BoardroomEntry(
             date: Date(),
-            whiteboard: Whiteboard(
+            boardroom: Boardroom(
                 name: "Example Board",
                 items: [
-                    WhiteboardItem(
+                    BoardroomItem(
+                        boardroomId: UUID().uuidString,
                         type: .text,
                         content: "Widget example",
-                        createdBy: "System",
                         position: CGPoint(x: 180, y: 180),
                         rotation: 0,
-                        scale: 1.0
+                        scale: 1.0,
+                        createdBy: "System"
                     )
-                ]
+                ],
+                createdBy: "System"
             ),
             displaySize: context.displaySize
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (WhiteboardEntry) -> ()) {
+    func getSnapshot(in context: Context, completion: @escaping (BoardroomEntry) -> ()) {
         // Use try-catch for better error handling
-        let entry: WhiteboardEntry
+        let entry: BoardroomEntry
         
         do {
-            // Try to get the latest whiteboard from shared UserDefaults
-            if let data = sharedDefaults.data(forKey: whiteboardsKey) {
-                let whiteboards = try JSONDecoder().decode([Whiteboard].self, from: data)
-                if !whiteboards.isEmpty {
-                    // Use the first whiteboard (most recently updated one)
-                    entry = WhiteboardEntry(date: Date(), whiteboard: whiteboards[0], displaySize: context.displaySize)
+            // Try to get the latest boardroom from shared UserDefaults
+            if let data = sharedDefaults.data(forKey: boardroomsKey) {
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let boardrooms = try decoder.decode([Boardroom].self, from: data)
+                if !boardrooms.isEmpty {
+                    // Use the first boardroom (most recently updated one)
+                    entry = BoardroomEntry(date: Date(), boardroom: boardrooms[0], displaySize: context.displaySize)
                 } else {
                     entry = placeholder(in: context)
                 }
@@ -70,15 +74,17 @@ struct Provider: TimelineProvider {
         // Update every 15 minutes (more reasonable for widgets)
         let refreshDate = Calendar.current.date(byAdding: .minute, value: 15, to: currentDate)!
         
-        let entry: WhiteboardEntry
+        let entry: BoardroomEntry
         
         do {
-            // Try to get the latest whiteboard from shared UserDefaults
-            if let data = sharedDefaults.data(forKey: whiteboardsKey) {
-                let whiteboards = try JSONDecoder().decode([Whiteboard].self, from: data)
-                if !whiteboards.isEmpty {
-                    // Use the first whiteboard (most recently updated one)
-                    entry = WhiteboardEntry(date: currentDate, whiteboard: whiteboards[0], displaySize: context.displaySize)
+            // Try to get the latest boardroom from shared UserDefaults
+            if let data = sharedDefaults.data(forKey: boardroomsKey) {
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let boardrooms = try decoder.decode([Boardroom].self, from: data)
+                if !boardrooms.isEmpty {
+                    // Use the first boardroom (most recently updated one)
+                    entry = BoardroomEntry(date: currentDate, boardroom: boardrooms[0], displaySize: context.displaySize)
                 } else {
                     entry = placeholder(in: context)
                 }
@@ -95,13 +101,13 @@ struct Provider: TimelineProvider {
     }
 }
 
-struct WhiteboardEntry: TimelineEntry {
+struct BoardroomEntry: TimelineEntry {
     let date: Date
-    let whiteboard: Whiteboard
+    let boardroom: Boardroom
     let displaySize: CGSize
 }
 
-struct WhiteboardWidgetEntryView : View {
+struct BoardroomWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var family
     
@@ -118,14 +124,14 @@ struct WhiteboardWidgetEntryView : View {
                 
                 // Items positioned using their relative coordinates in the widget
                 ZStack {
-                    ForEach(entry.whiteboard.items) { item in
+                    ForEach(entry.boardroom.items) { item in
                         // Debug log for each item
-                        let _ = print("Widget showing item: id=\(item.id), position=\(item.position), rotation=\(item.rotation ?? 0), scale=\(item.scale ?? 1.0)")
+                        let _ = print("Widget showing item: id=\(item.id), position=\(item.position), rotation=\(item.rotation), scale=\(item.scale)")
                         
                         WidgetItemView(item: item)
                             .position(item.position)
-                            .rotationEffect(Angle(degrees: Double(item.rotation ?? 0)))
-                            .scaleEffect(item.scale ?? 1.0)
+                            .rotationEffect(Angle(degrees: Double(item.rotation)))
+                            .scaleEffect(item.scale)
                     }
                 }
             }
@@ -198,7 +204,7 @@ struct WhiteboardWidgetEntryView : View {
 }
 
 struct WidgetItemView: View {
-    let item: WhiteboardItem
+    let item: BoardroomItem
     
     var body: some View {
         switch item.type {
@@ -257,20 +263,20 @@ struct WidgetItemView: View {
 }
 
 struct widget: Widget {
-    let kind: String = "WhiteboardWidget"
+    let kind: String = "BoardroomWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             if #available(iOS 17.0, *) {
-                WhiteboardWidgetEntryView(entry: entry)
+                BoardroomWidgetEntryView(entry: entry)
                     .containerBackground(.white, for: .widget)
             } else {
-                WhiteboardWidgetEntryView(entry: entry)
+                BoardroomWidgetEntryView(entry: entry)
                     .background(Color.white)
             }
         }
-        .configurationDisplayName("Whiteboard")
-        .description("See your whiteboard exactly as you created it.")
+        .configurationDisplayName("Boardroom")
+        .description("See your boardroom exactly as you created it.")
         .supportedFamilies([.systemLarge]) // Only support large widget for perfect 1:1 mapping
     }
 }
@@ -278,29 +284,32 @@ struct widget: Widget {
 struct widget_Previews: PreviewProvider {
     static var previews: some View {
         // Preview for large widget only
-        WhiteboardWidgetEntryView(
-            entry: WhiteboardEntry(
+        BoardroomWidgetEntryView(
+            entry: BoardroomEntry(
                 date: Date(),
-                whiteboard: Whiteboard(
+                boardroom: Boardroom(
                     name: "hi sam",
                     items: [
-                        WhiteboardItem(
+                        BoardroomItem(
+                            boardroomId: UUID().uuidString,
                             type: .text,
                             content: "hi becky",
-                            createdBy: "You",
                             position: CGPoint(x: 260, y: 140),
                             rotation: 0,
-                            scale: 1.0
+                            scale: 1.0,
+                            createdBy: "You"
                         ),
-                        WhiteboardItem(
+                        BoardroomItem(
+                            boardroomId: UUID().uuidString,
                             type: .image,
                             content: "local_photo:example.jpg",
-                            createdBy: "System",
                             position: CGPoint(x: 180, y: 180),
                             rotation: 0,
-                            scale: 1.0
+                            scale: 1.0,
+                            createdBy: "System"
                         )
-                    ]
+                    ],
+                    createdBy: "You"
                 ),
                 displaySize: CGSize(width: 338, height: 354)
             )

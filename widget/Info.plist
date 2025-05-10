@@ -8,8 +8,8 @@
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
 	<key>CFBundleDisplayName</key>
-	<string>Whiteboard</string>
+	<string>Boardroom</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2025 Whiteboard App</string>
+	<string>© 2025 Boardroom App</string>
 </dict>
 </plist>
